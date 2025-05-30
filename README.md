@@ -268,30 +268,6 @@ docker-compose exec redis redis-cli
 
 Redis Hashは、一つのキーの下に複数のフィールド-値ペアを格納するデータ構造です。
 
-### Redis Hashの特徴
-
-```mermaid
-graph LR
-    subgraph "Redis Hash: order:status:123-0"
-        F1[status: "completed"]
-        F2[processed_at: "1640995205.456"]
-        F3[worker_id: "worker-1"]
-        F4[processing_time: "3.2"]
-    end
-    
-    subgraph "従来のString Keys"
-        K1[order:123:status]
-        K2[order:123:processed_at]
-        K3[order:123:worker_id]
-        K4[order:123:processing_time]
-    end
-    
-    F1 -.->|より効率的| K1
-    F2 -.->|メモリ使用量削減| K2
-    F3 -.->|原子的操作| K3
-    F4 -.->|まとめて取得| K4
-```
-
 ### Redis Hash vs String Keys
 
 | 特徴 | Redis Hash | 複数のString Keys |
@@ -301,27 +277,59 @@ graph LR
 | **取得効率** | HGETALL で一括取得 | 複数の GET が必要 |
 | **構造化** | オブジェクト的な表現 | フラットなキー構造 |
 
-### Redis Hash コマンド例
+#### Redis Hash コマンド例
 
 ```bash
 # ハッシュにフィールドを設定
-HSET order:status:123-0 status "processing" worker_id "worker-1"
+HSET order:123-0 status "processing" worker_id "worker-1"
 
 # 全フィールドを取得
-HGETALL order:status:123-0
+HGETALL order:123-0
 
 # 特定フィールドを取得
-HGET order:status:123-0 status
+HGET order:123-0 status
 
 # フィールドの存在確認
-HEXISTS order:status:123-0 processed_at
+HEXISTS order:123-0 processed_at
 
 # フィールドを削除
-HDEL order:status:123-0 worker_id
+HDEL order:123-0 worker_id
 
 # ハッシュのフィールド数
-HLEN order:status:123-0
+HLEN order:123-0
 ```
+
+#### 従来のString Keysのコマンド例
+```bash
+# ステータスを設定
+SET order:123-0:status "processing"
+SET order:123-0:worker_id "worker-1"
+
+# 全フィールドを取得（個別にGETする必要あり）
+GET order:123-0:status
+# 実行結果例
+"processing"
+
+GET order:123-0:worker_id
+# 実行結果例
+"worker-1"
+
+# フィールドの存在確認
+EXISTS order:123-0:processed_at
+# 実行結果例（フィールドが存在しない場合）
+(integer) 0
+
+# フィールドを削除
+DEL order:123-0:worker_id
+# 実行結果例（削除したキー数）
+(integer) 1
+
+# フィールド数を知りたい場合はワイルドカードでKEYSを使う
+KEYS order:123-0:*
+# 実行結果例
+1) "order:123-0:status"
+```
+
 
 ### このプロジェクトでの活用
 
